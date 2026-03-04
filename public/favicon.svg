@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Fundo rosa -->
+  <rect width="64" height="64" rx="14" fill="#f43f5e"/>
+  <!-- Novelo de lã simplificado -->
+  <circle cx="32" cy="32" r="18" fill="white" opacity="0.95"/>
+  <!-- Linhas do novelo -->
+  <ellipse cx="32" cy="32" rx="18" ry="10" fill="none" stroke="#f43f5e" stroke-width="2.5"/>
+  <ellipse cx="32" cy="32" rx="10" ry="18" fill="none" stroke="#f43f5e" stroke-width="2.5"/>
+  <!-- Ponto central -->
+  <circle cx="32" cy="32" r="3" fill="#f43f5e"/>
+  <!-- Linha do fio saindo -->
+  <path d="M42 22 Q52 14 54 20" stroke="#f43f5e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>
