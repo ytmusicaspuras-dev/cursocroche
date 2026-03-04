@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Scissors, ChevronLeft, ChevronRight, Download, ExternalLink, Play } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Scissors, ChevronLeft, ChevronRight, Download, ExternalLink, Play, X } from 'lucide-react'
 
 // ============================================================
 // DADOS DOS MÓDULOS
@@ -116,92 +116,126 @@ const driveLinks = [
 ]
 
 // ============================================================
-// COMPONENTE DE THUMBNAIL DO YOUTUBE
+// HELPERS
 // ============================================================
 function getYouTubeId(url) {
   const match = url.match(/[?&]v=([^&]+)/)
   return match ? match[1] : null
 }
 
-function VideoCard({ video }) {
+// ============================================================
+// MODAL DE PLAYER
+// ============================================================
+function VideoModal({ video, onClose }) {
   const videoId = getYouTubeId(video.url)
-  const thumb = videoId
-    ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
-    : null
+
+  // Fecha com ESC
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handler)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
 
   return (
-    <a
-      href={video.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex-shrink-0 w-52 group cursor-pointer"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header do modal */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
+          <h3 className="text-white text-sm font-semibold truncate pr-4">{video.title}</h3>
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 hover:bg-rose-500 transition-colors flex items-center justify-center"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+        {/* Player */}
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+            title={video.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// CARD DE VÍDEO
+// ============================================================
+function VideoCard({ video, onPlay }) {
+  const videoId = getYouTubeId(video.url)
+  const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null
+
+  return (
+    <button
+      onClick={() => onPlay(video)}
+      className="flex-shrink-0 w-52 group cursor-pointer text-left"
     >
       <div className="relative overflow-hidden rounded-xl shadow-sm border border-gray-100 group-hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
         {thumb ? (
-          <img
-            src={thumb}
-            alt={video.title}
-            className="w-full h-32 object-cover"
-          />
+          <img src={thumb} alt={video.title} className="w-full h-32 object-cover" />
         ) : (
           <div className="w-full h-32 bg-gradient-to-br from-rose-100 to-pink-200 flex items-center justify-center">
             <Play className="w-8 h-8 text-rose-400" />
           </div>
         )}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-          <div className="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg">
-            <Play className="w-4 h-4 text-white ml-0.5" fill="white" />
+        {/* Overlay com play */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+          <div className="w-12 h-12 bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl scale-75 group-hover:scale-100">
+            <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
           </div>
         </div>
       </div>
-      <p className="mt-2 text-xs font-600 text-gray-700 line-clamp-2 group-hover:text-rose-500 transition-colors duration-200">
+      <p className="mt-2 text-xs font-semibold text-gray-700 line-clamp-2 group-hover:text-rose-500 transition-colors duration-200">
         {video.title}
       </p>
-    </a>
+    </button>
   )
 }
 
 // ============================================================
-// COMPONENTE DE SEÇÃO DE VÍDEOS (CARROSSEL)
+// SEÇÃO DE MÓDULO (CARROSSEL)
 // ============================================================
-function VideoSection({ module }) {
+function VideoSection({ module, onPlay }) {
   const scrollRef = useRef(null)
-
-  const scroll = (dir) => {
-    scrollRef.current?.scrollBy({ left: dir * 220, behavior: 'smooth' })
-  }
+  const scroll = (dir) => scrollRef.current?.scrollBy({ left: dir * 220, behavior: 'smooth' })
 
   return (
     <section className={`py-8 px-4 md:px-8 bg-gradient-to-r ${module.gradient} rounded-2xl mx-4 md:mx-8 mb-6`}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className={`text-xl font-800 ${module.accent}`}>{module.title}</h2>
-          <span className={`text-xs font-600 px-2 py-0.5 rounded-full border ${module.border} ${module.accent} bg-white/60`}>
+          <h2 className={`text-xl font-bold ${module.accent}`}>{module.title}</h2>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${module.border} ${module.accent} bg-white/60`}>
             {module.subtitle} · {module.videos.length} aulas
           </span>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => scroll(-1)}
-            className="w-8 h-8 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center hover:bg-rose-50 transition-colors"
-          >
+          <button onClick={() => scroll(-1)} className="w-8 h-8 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center hover:bg-rose-50 transition-colors">
             <ChevronLeft className="w-4 h-4 text-gray-600" />
           </button>
-          <button
-            onClick={() => scroll(1)}
-            className="w-8 h-8 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center hover:bg-rose-50 transition-colors"
-          >
+          <button onClick={() => scroll(1)} className="w-8 h-8 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center hover:bg-rose-50 transition-colors">
             <ChevronRight className="w-4 h-4 text-gray-600" />
           </button>
         </div>
       </div>
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-2"
-        style={{ scrollbarWidth: 'thin' }}
-      >
+      <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
         {module.videos.map((video, i) => (
-          <VideoCard key={i} video={video} />
+          <VideoCard key={i} video={video} onPlay={onPlay} />
         ))}
       </div>
     </section>
@@ -209,22 +243,28 @@ function VideoSection({ module }) {
 }
 
 // ============================================================
-// COMPONENTE PRINCIPAL
+// APP PRINCIPAL
 // ============================================================
 export default function App() {
+  const [activeVideo, setActiveVideo] = useState(null)
+
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* MODAL PLAYER */}
+      {activeVideo && (
+        <VideoModal video={activeVideo} onClose={() => setActiveVideo(null)} />
+      )}
+
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-rose-500 rounded-xl flex items-center justify-center shadow">
-              <Scissors className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-800 text-gray-800 leading-tight">Crochê da Simone</h1>
-              <p className="text-xs text-gray-400 leading-tight">por Simone Rocha</p>
-            </div>
+          <div className="w-9 h-9 bg-rose-500 rounded-xl flex items-center justify-center shadow">
+            <Scissors className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-800 leading-tight">Crochê da Simone</h1>
+            <p className="text-xs text-gray-400 leading-tight">por Simone Rocha</p>
           </div>
         </div>
       </header>
@@ -232,63 +272,47 @@ export default function App() {
       {/* HERO */}
       <div className="bg-gradient-to-r from-rose-500 to-pink-600 text-white py-10 px-4 md:px-8 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-800 mb-2">🧶 Crochê da Simone</h2>
-          <p className="text-rose-100 text-base font-400">
-            Aprenda crochê do zero com aulas práticas e carinhosas
-          </p>
-          <p className="mt-1 text-rose-200 text-sm font-300">por <strong className="text-white">Simone Rocha</strong></p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-2">🧶 Crochê da Simone</h2>
+          <p className="text-rose-100 text-base">Aprenda crochê do zero com aulas práticas e carinhosas</p>
+          <p className="mt-1 text-rose-200 text-sm">por <strong className="text-white">Simone Rocha</strong></p>
         </div>
       </div>
 
-      {/* MÓDULOS DE VÍDEO */}
+      {/* MÓDULOS */}
       <main className="max-w-7xl mx-auto py-6">
         {modules.map((mod) => (
-          <VideoSection key={mod.id} module={mod} />
+          <VideoSection key={mod.id} module={mod} onPlay={setActiveVideo} />
         ))}
 
-        {/* SEÇÃO DE PDFs */}
+        {/* PDFs */}
         <section className="mx-4 md:mx-8 mb-6 py-8 px-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl">
-          <h2 className="text-xl font-800 text-emerald-600 mb-1">📄 Receitas e Moldes Premium</h2>
-          <p className="text-xs text-emerald-500 mb-5 font-600">PDFs exclusivos para download</p>
+          <h2 className="text-xl font-bold text-emerald-600 mb-1">📄 Receitas e Moldes Premium</h2>
+          <p className="text-xs text-emerald-500 mb-5 font-semibold">PDFs exclusivos para download</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {pdfs.map((pdf, i) => (
-              <a
-                key={i}
-                href={pdf.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition-all duration-200 text-center"
-              >
+              <a key={i} href={pdf.url} target="_blank" rel="noopener noreferrer"
+                className="group flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition-all duration-200 text-center">
                 <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-500 transition-colors">
                   <Download className="w-5 h-5 text-emerald-600 group-hover:text-white transition-colors" />
                 </div>
-                <span className="text-xs font-600 text-gray-700 group-hover:text-emerald-600 transition-colors leading-tight">
-                  {pdf.title}
-                </span>
+                <span className="text-xs font-semibold text-gray-700 group-hover:text-emerald-600 transition-colors leading-tight">{pdf.title}</span>
               </a>
             ))}
           </div>
         </section>
 
-        {/* SEÇÃO DRIVE */}
+        {/* DRIVE */}
         <section className="mx-4 md:mx-8 mb-8 py-8 px-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl">
-          <h2 className="text-xl font-800 text-purple-600 mb-1">📁 Gráficos e Receitas</h2>
-          <p className="text-xs text-purple-400 mb-5 font-600">Material complementar no Google Drive</p>
+          <h2 className="text-xl font-bold text-purple-600 mb-1">📁 Gráficos e Receitas</h2>
+          <p className="text-xs text-purple-400 mb-5 font-semibold">Material complementar no Google Drive</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {driveLinks.map((link, i) => (
-              <a
-                key={i}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all duration-200"
-              >
+              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all duration-200">
                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-500 transition-colors flex-shrink-0">
                   <ExternalLink className="w-5 h-5 text-purple-600 group-hover:text-white transition-colors" />
                 </div>
-                <span className="text-sm font-700 text-gray-700 group-hover:text-purple-600 transition-colors">
-                  {link.title}
-                </span>
+                <span className="text-sm font-bold text-gray-700 group-hover:text-purple-600 transition-colors">{link.title}</span>
               </a>
             ))}
           </div>
